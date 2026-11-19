@@ -2,7 +2,9 @@
 
 App web instalable (PWA) y descargable para Android/iOS (Capacitor). Organiza placas de redes por carpeta → mes → publicación, con estados (borrador / en revisión / aprobada / publicada), carruseles, calendario, ideas y copy.
 
-Todo se guarda **en el dispositivo** (IndexedDB), funciona sin conexión y no necesita servidor.
+Dos modos (según `www/config.js`):
+- **Local** (por defecto): todo en el dispositivo (IndexedDB), sin cuentas.
+- **Nube (Supabase)**: cuentas, sincronización entre dispositivos y comentarios de clientes. **Solo la cuenta dueña edita** (subir/borrar placas, cambiar nombre, foto y carpetas); el resto ve y comenta.
 
 ## Probar en web
 ```
@@ -23,5 +25,14 @@ Cambiá `appId` y `appName` en `capacitor.config.json` antes de publicar en las 
 ## Copias de seguridad
 Ajustes (“Editar marca y carpetas”) → Exportar / Importar copia (JSON).
 
-## Límite actual
-Los datos son por dispositivo. Para compartir con clientes y que comenten, `www/local.js` es la única capa de datos: reemplazala por Firebase/Supabase (misma interfaz doc/collection/onSnapshot + upload).
+## Activar cuentas, sincronización y comentarios (Supabase, plan gratuito)
+1. Creá un proyecto en https://supabase.com.
+2. SQL Editor → pegá y ejecutá `supabase/schema.sql` completo.
+3. Project Settings → API: copiá *Project URL* y *anon key* en `www/config.js`.
+4. Abrí la app y creá **tu** cuenta. Luego, en el SQL Editor: `insert into app_owner select id from auth.users where email = 'TU_EMAIL';` — desde ese momento solo vos editás.
+5. Clientes: se registran desde la app (o poné `allowSignup:false` y los invitás desde Authentication → Users → Invite, recomendado para que no entre cualquiera). Authentication → Providers → Email: podés desactivar "Confirm email" si querés que entren sin confirmar.
+6. Authentication → URL Configuration: poné la URL donde publiques la app.
+
+Seguridad: las reglas (RLS) del schema aplican en el servidor; aunque alguien manipule la app, solo la cuenta dueña puede escribir. Los archivos están en un bucket privado con enlaces firmados.
+
+En modo nube hace falta conexión para ver el contenido (la app abre sin conexión pero no carga datos).

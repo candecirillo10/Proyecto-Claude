@@ -186,3 +186,4 @@ a.fchip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 .msg.ok{color:#bccdff}.bk{display:flex;gap:8px;flex-wrap:wrap}.inst{margin:0}
+[data-mode=cloud] .bkwrap{display:none}

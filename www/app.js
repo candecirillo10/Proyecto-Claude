@@ -39,6 +39,7 @@ const dbErr=e=>e&&e.code==='quota_exceeded'?'Se llenó el espacio de la app. Bor
 const upErr=e=>({too_large:'Uno de los archivos pesa más de 20 MB.',unsupported_type:'Uno de los archivos tiene un formato no compatible.',quota_or_state:'Se llenó el espacio de almacenamiento. Borrá placas viejas para subir nuevas.',rate_limited:'Demasiadas subidas seguidas. Esperá un momento y probá de nuevo.'})[e&&e.code]||'No se pudo subir. Probá de nuevo.';
 
 function render(){renderHeader();renderTabs();renderView()}
+function decorate(){if(!S.cm)return;document.querySelectorAll('[data-act=comment]').forEach(b=>{const el=b.dataset.el||pid(b.dataset.id);b.dataset.base=b.dataset.base||b.textContent;const n=S.cm.count(el);b.textContent=b.dataset.base+(n?' ('+n+')':'')})}
 function renderHeader(){
   const b=S.config.brand||'Tu marca';
   $('#brandName').textContent=b;
@@ -84,9 +85,10 @@ function renderTabs(){
 }
 let barKey='';
 const noticeHtml=()=>S.err?`<div class="notice">${esc(S.err)}</div>`:S.slow?'<div class="notice">El contenido está tardando en cargar. Puede que lo que ves no esté actualizado.</div>':'';
-function renderView(){
+function renderView(){renderView0();decorate()}
+function renderView0(){
   const r=route(),v=$('#view');
-  if(S.failed){barKey='';v.innerHTML=`<div class="empty"><div><h2>No se pudo abrir el contenido</h2><p class="msg">No se pudo abrir el almacenamiento del dispositivo. Revisá que el navegador no esté en modo privado y recargá la página.</p></div></div>`;return}
+  if(S.failed){barKey='';v.innerHTML=`<div class="empty"><div><h2>No se pudo abrir el contenido</h2><p class="msg">No se pudo abrir el contenido. Revisá tu conexión y recargá la página.</p></div></div>`;return}
   if(!r.cal&&r.f.kind==='notes'){
     const f=r.f,key=['notes',f.id,f.name,S.canEdit,!!S.uid].join('|');
     if(key!==barKey){barKey=key;v.innerHTML=`<div class="nbar">${notesBar(f)}</div><div id="notice"></div><div id="grid"></div>`}
@@ -186,9 +188,9 @@ function notesGrid(f){
 function openSheet(html,size){
   S.open=null;const sh=$('#sheet');sh.className='sheet '+(size||'');
   sh.innerHTML='<button type="button" class="x" data-act="close" aria-label="Cerrar">✕</button>'+html;
-  $('#ov').hidden=false;document.body.style.overflow='hidden';sh.focus();
+  $('#ov').hidden=false;document.body.style.overflow='hidden';sh.focus();decorate();
 }
-function closeSheet(){$('#ov').hidden=true;$('#sheet').innerHTML='';document.body.style.overflow='';S.open=null;S.urls.forEach(u=>URL.revokeObjectURL(u));S.urls=[]}
+function closeSheet(){$('#ov').hidden=true;$('#sheet').innerHTML='';document.body.style.overflow='';S.open=null;S.cmOpen=null;S.urls.forEach(u=>URL.revokeObjectURL(u));S.urls=[]}
 
 const OK=/^(image\/(png|jpeg|webp|gif)|video\/(mp4|webm))$/;
 const extType=n=>({png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',gif:'image/gif',mp4:'video/mp4',webm:'video/webm'})[(n.split('.').pop()||'').toLowerCase()];
@@ -280,6 +282,16 @@ function openNote(id,p){
   openSheet(`<h2>Editar idea</h2><form id="noteForm" data-id="${esc(id)}" data-p="${p?1:0}" class="form"><label class="f">Título <input id="ntTitle" value="${esc(n.title)}" maxlength="120"></label><label class="f">Idea <textarea id="ntText" rows="8">${esc(n.text)}</textarea></label>${S.uid?`<label class="check"><input type="checkbox" id="ntPriv"${p?' checked':''}> Solo para mí (tus clientes no la ven)</label>`:''}<p class="msg" id="ntMsg"></p><div class="row"><button class="primary" type="submit">Guardar</button><button type="button" class="danger" data-act="ndel">Eliminar</button></div></form>`,'sm');
 }
 
+function drawComments(){
+  const box=$('#cmList');if(!box||!S.cmOpen)return;const me=S.cm.me(),l=S.cm.list(S.cmOpen);
+  box.innerHTML=l.length?l.map(c=>`<div class="ncard" style="margin:0 0 10px"><strong>${esc(c.author_name||'Usuario')}</strong> <span class="msg">${new Date(c.created_at).toLocaleString('es-AR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span><p style="margin-top:6px">${esc(c.body)}</p>${(c.author_id===me||S.canEdit)?`<button type="button" class="danger" data-act="cmdel" data-id="${c.id}" style="min-height:36px;margin-top:8px;font-size:13px">Borrar</button>`:''}</div>`).join(''):'<p class="msg">Todavía no hay comentarios.</p>';
+  box.scrollTop=box.scrollHeight;
+}
+async function openComments({element}){
+  if(!element||!S.cm)return;const target=element.id;
+  openSheet(`<h2>Comentarios</h2><div id="cmList" style="max-height:45dvh;overflow:auto;margin-bottom:14px"></div><form id="cmForm" class="form"><textarea id="cmText" maxlength="2000" placeholder="Escribí tu comentario…" aria-label="Comentario"></textarea><p class="msg" id="cmMsg"></p><div class="row end"><button type="button" data-act="close">Cerrar</button><button class="primary" type="submit">Enviar</button></div></form>`,'sm');
+  S.cmOpen=target;drawComments();
+}
 const slug=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,24)||'carpeta';
 function folderRow(f){const n=all().filter(i=>i.folder===f.id).length;
   return `<div class="frow" data-id="${esc(f.id)}"><input class="fname" value="${esc(f.name)}" aria-label="Nombre de la carpeta" maxlength="40"><span class="msg">${f.kind==='notes'?'Notas':'Placas '+ratio(f).replace('/',':')} · ${n}</span>${n?'<span></span>':'<button type="button" class="danger" data-act="rmf">Quitar</button>'}</div>`}
@@ -287,7 +299,7 @@ function openSettings(focusNew){
   openSheet(`<h2>Marca y carpetas</h2><form id="setForm" class="form"><div class="avrow" id="avWrap">${avRow()}</div><div class="two"><label class="f">Nombre de la marca <input id="sBrand" value="${esc(S.config.brand)}" placeholder="Ej.: Café Lumbre" maxlength="60"></label><label class="f">Usuario <input id="sHandle" value="${esc(S.config.handle)}" placeholder="@cafelumbre" maxlength="40"></label></div>
   <h3>Carpetas</h3><div id="fList">${folders().map(folderRow).join('')}</div><p class="msg">Solo se pueden quitar carpetas vacías.</p>
   <h3>Nueva carpeta</h3><div class="three"><label class="f">Nombre <input id="nfName" placeholder="Ej.: Campaña Navidad" maxlength="40"></label><label class="f">Tipo <select id="nfKind"><option value="media">Placas</option><option value="notes">Notas</option></select></label><label class="f">Formato <select id="nfRatio"><option value="4/5">4:5 posteo</option><option value="1/1">1:1 cuadrado</option><option value="9/16">9:16 historia o reel</option></select></label></div>
-  <h3>Copia de seguridad</h3><div class="bk"><button type="button" data-act="bkexp">Exportar todo</button><button type="button" data-act="bkimp">Importar copia</button></div><p class="msg" id="bkMsg">Tus datos viven en este dispositivo. Exportá una copia para guardarla o pasarla a otro equipo.</p>
+  <div class="bkwrap"><h3>Copia de seguridad</h3><div class="bk"><button type="button" data-act="bkexp">Exportar todo</button><button type="button" data-act="bkimp">Importar copia</button></div><p class="msg" id="bkMsg">Tus datos viven en este dispositivo. Exportá una copia para guardarla o pasarla a otro equipo.</p></div>
   <p class="msg" id="sMsg"></p><div class="row end"><button type="button" data-act="close">Cancelar</button><button class="primary" type="submit">Guardar</button></div></form>`,'sm');
   if(focusNew)$('#nfName').focus();
 }
@@ -326,12 +338,14 @@ document.addEventListener('click',async e=>{
     try{await S.comments.openComposer({element:el})}catch(err){if(err&&(err.code==='unavailable'||err.code==='not_granted')){S.comments=null;barKey='';renderView()}}}
   else if(a==='ndel')$('#ntMsg').innerHTML='¿Eliminar esta idea? <button type="button" class="danger" data-act="ndelyes">Sí, eliminar</button> <button type="button" data-act="no">No</button>';
   else if(a==='ndelyes'){const fm=$('#noteForm');try{await noteRef(fm.dataset.id,fm.dataset.p==='1').delete();closeSheet()}catch(err){$('#ntMsg').textContent=dbErr(err)}}
+  else if(a==='cmdel'){try{await S.cm.remove(+t.dataset.id)}catch(_){}}
   else if(a==='no')t.parentElement.textContent='';
 });
 document.addEventListener('submit',async e=>{
   e.preventDefault();const fm=e.target,btn=fm.querySelector('button[type=submit]');
   if(fm.id==='upForm')return doUpload();
   if(fm.id==='setForm')return saveSettings(fm);
+  if(fm.id==='cmForm'){const tx=$('#cmText'),b=tx.value.trim();if(!b){tx.focus();return}btn.disabled=true;try{await S.cm.add(S.cmOpen,b);tx.value=''}catch(_){$('#cmMsg').textContent='No se pudo enviar. Probá de nuevo.'}btn.disabled=false;return}
   if(fm.id==='composer'){const text=$('#nText').value.trim();if(!text){$('#nText').focus();return}
     btn.disabled=true;const doc={folder:cur().id,title:$('#nTitle').value.trim(),text,created:Date.now()};
     try{await($('#nPriv')?.checked?S.db.collection('data/users/'+S.uid):S.db.collection('items')).add(doc);$('#nText').value='';$('#nTitle').value='';$('#nMsg').textContent=''}catch(err){$('#nMsg').textContent=dbErr(err)}
@@ -375,6 +389,7 @@ async function start(){
   try{S.canEdit=!!(user&&await user.canEdit())}catch(_){}
   if(S.canEdit){try{S.assets=await claude.use('assets')}catch(_){}try{S.uid=await user.id()}catch(_){}}
   
+  try{S.cm=await claude.use('comments');S.comments={openComposer:openComments};S.cm.subscribe(()=>{decorate();if(S.cmOpen)drawComments()})}catch(_){}
   render();
   const timer=setTimeout(()=>{if(!S.confirmed){S.slow=true;renderView()}},10000);
   db.doc('config/main').onSnapshot(s=>{const d=s.exists?s.data():null;const fs=Array.isArray(d?.folders)?d.folders.filter(f=>f&&typeof f.id==='string'&&f.name):[];S.config={brand:d?.brand||'',handle:d?.handle||'',avatar:typeof d?.avatar==='string'?d.avatar:'',avatarZoom:+d?.avatarZoom||100,folders:fs.length?fs:DEF};render()},()=>{});

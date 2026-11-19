@@ -15,7 +15,7 @@ const put=(p,v)=>tx(DOCS,'readwrite',t=>t.objectStore(DOCS).put(v,p)).then(notif
 const docRef=p=>({
   get:async()=>snapDoc(p,await get(p)),
   set:async v=>put(p,JSON.parse(JSON.stringify(v))),
-  update:async v=>{const o=await get(p);if(o===undefined){const e=new Error('not found');e.code='not_found';throw e}await put(p,{...o,...JSON.parse(JSON.stringify(v))})},
+  update:async v=>{const o=await get(p);if(o===undefined){const e=new Error('not found');e.code='invalid_argument';throw e}await put(p,{...o,...JSON.parse(JSON.stringify(v))})},
   delete:async()=>{await tx(DOCS,'readwrite',t=>t.objectStore(DOCS).delete(p));notify()},
   onSnapshot(cb,err){const run=async()=>{try{cb(snapDoc(p,await get(p)))}catch(e){err&&err(e)}};subs.add(run);run();return()=>subs.delete(run)}
 });
@@ -59,7 +59,7 @@ document.addEventListener('click',async e=>{const t=e.target.closest('[data-act]
 // Instalación PWA
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;const b=document.getElementById('install');if(b)b.hidden=false});
 document.addEventListener('click',async e=>{if(e.target.id==='install'&&deferred){deferred.prompt();await deferred.userChoice;deferred=null;e.target.hidden=true}});
-window.claude={async use(n){
+if(!(window.APP_CONFIG&&window.APP_CONFIG.supabaseUrl))window.claude={async use(n){
   if(!idb){idb=await open();await preload();try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(_){}}
   if(n==='db')return db;if(n==='user')return user;if(n==='assets')return assets;throw err('unavailable')}};
 })();
