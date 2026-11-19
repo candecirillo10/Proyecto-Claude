@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crown Studio</title>
+<meta name="theme-color" content="#0d0d0d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Crown">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="band top"><div class="wrap">
+  <div class="brand"><div class="avatar" id="avatar" aria-hidden="true">T</div><div><h1 id="brandName">Tu marca</h1><p class="sub" id="brandSub">Contenido para redes</p></div></div>
+  <div class="row" id="ownerActions" hidden><button type="button" data-act="settings">Editar marca y carpetas</button><button type="button" id="install" hidden>Instalar app</button></div>
+</div></header>
+<nav class="tabs" aria-label="Carpetas"><div class="tabrow" id="tabs"></div></nav>
+<main class="band"><div class="wrap" id="view"></div></main>
+<input type="file" id="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" hidden>
+<input type="file" id="avFile" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+<div class="ov" id="ov" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true" tabindex="-1"></div></div>
+<script src="local.js"></script>
+<script src="app.js"></script>
+<script>if('serviceWorker' in navigator&&location.protocol.startsWith('http'))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+</body>
+</html>
