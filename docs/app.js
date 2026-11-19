@@ -405,7 +405,7 @@ async function start(){
   render();
   const timer=setTimeout(()=>{if(!S.confirmed){S.slow=true;renderView()}},10000);
   db.doc('config/main').onSnapshot(s=>{const d=s.exists?s.data():null;const fs=Array.isArray(d?.folders)?d.folders.filter(f=>f&&typeof f.id==='string'&&f.name):[];S.config={brand:d?.brand||'',handle:d?.handle||'',avatar:typeof d?.avatar==='string'?d.avatar:'',avatarZoom:+d?.avatarZoom||100,folders:fs.length?fs:DEF};render()},()=>{});
-  db.collection('items').onSnapshot(s=>{S.items=s.docs.map(d=>({...d.data(),id:d.id}));S.loaded=true;if(!s.metadata.fromCache){S.confirmed=true;S.slow=false;clearTimeout(timer)}render()},()=>{S.loaded=true;S.confirmed=true;clearTimeout(timer);S.err='No se pudo cargar el contenido. Volvé a abrir la página en un rato.';render()});
+  db.collection('items').onSnapshot(s=>{S.items=s.docs.map(d=>({...d.data(),id:d.id}));S.loaded=true;if(!s.metadata.fromCache){S.confirmed=true;S.slow=false;clearTimeout(timer)}render()},(e)=>{S.loaded=true;S.confirmed=true;clearTimeout(timer);S.err='No se pudo cargar el contenido. Volvé a abrir la página en un rato.'+(e&&(e.message||e.code)?' Detalle: '+(e.message||e.code):'');render()});
   if(S.uid){try{db.collection('data/users/'+S.uid).onSnapshot(s=>{S.priv=s.docs.map(d=>({...d.data(),id:d.id,private:true}));render()},()=>{})}catch(_){}}
 }
 render();start();
