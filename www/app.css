@@ -99,12 +99,12 @@ label.f{display:grid;gap:6px;font-size:14px;font-weight:600}
 @media(max-width:560px){.two,.three{grid-template-columns:1fr}}
 .frow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;margin-bottom:8px}
 .frow .msg{white-space:nowrap}
-.ov{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);display:grid;place-items:center;padding:16px}
+.ov{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);display:grid;place-items:center;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
 .ov[hidden]{display:none}
-.sheet{background:var(--panel);border:1px solid var(--line);border-radius:22px;width:min(1060px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:clamp(18px,3vw,30px);position:relative}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:22px;width:min(1060px,100%);max-height:calc(100dvh - max(12px,env(safe-area-inset-top)) - max(12px,env(safe-area-inset-bottom)));overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:clamp(18px,3vw,30px);position:relative}
 .sheet.sm{width:min(600px,100%)}
 .sheet>h2{margin:0 52px 18px 0}
-.x{position:absolute;top:12px;right:12px;width:44px;padding:0;z-index:2}
+.x{position:sticky;top:10px;display:block;width:44px;height:44px;margin:-12px -12px -32px auto;padding:0;z-index:5;font-size:18px;line-height:1;background:rgba(13,13,13,.88);border:1px solid rgba(255,255,255,.55);box-shadow:0 2px 12px rgba(0,0,0,.55);backdrop-filter:blur(6px)}
 .detail{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:28px}
 @media(max-width:760px){.detail{grid-template-columns:1fr}}
 .viewer{position:relative;background:var(--card);border-radius:16px;overflow:hidden;max-height:74dvh;width:100%}
