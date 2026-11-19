@@ -1,8 +1,8 @@
-// Completá con los datos de tu proyecto Supabase (Project Settings → API).
-// La anon key es pública por diseño: la seguridad la dan las reglas de supabase/schema.sql.
+// Datos de tu proyecto Supabase. La clave "publishable" es pública por diseño:
+// la seguridad la dan las reglas de supabase/schema.sql.
 // Si dejás supabaseUrl vacío, la app funciona en modo local (sin cuentas ni sincronización).
 window.APP_CONFIG={
-  supabaseUrl:'',
-  supabaseAnonKey:'',
-  allowSignup:false  // false = solo entran cuentas que invites desde el panel de Supabase (true = cualquiera puede crear cuenta)
+  supabaseUrl:'https://trwzjqxghbcbuqhdnysk.supabase.co',
+  supabaseAnonKey:'sb_publishable_rgigFUcuUYG5D8Vk5NX16g_WuHMNHOh',
+  allowSignup:true   // TEMPORAL: ponelo en false después de crear tu cuenta de dueña
 };
