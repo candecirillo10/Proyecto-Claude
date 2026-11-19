@@ -187,3 +187,9 @@ a.fchip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 
 .msg.ok{color:#bccdff}.bk{display:flex;gap:8px;flex-wrap:wrap}.inst{margin:0}
 [data-mode=cloud] .bkwrap{display:none}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 12px;font-size:13px;color:var(--mut)}.lg{display:inline-flex;align-items:center;gap:6px}
+.dot2{width:10px;height:10px;border-radius:50%;display:inline-block;background:#8d8880}.dot2.st-revision{background:#e7cb9f}.dot2.st-aprobada{background:#8faaff}.dot2.st-publicada{background:#f3efe8}.dot2.st-borrador{background:#8d8880}
+.dcount span.st-borrador{background:#8d8880;color:#0d0d0d}.dcount span.st-revision{background:#e7cb9f;color:#0d0d0d}.dcount span.st-aprobada{background:#8faaff;color:#0d0d0d}.dcount span.st-publicada{background:#f3efe8;color:#0d0d0d}
+.dthumbs a.b-borrador{box-shadow:0 3px 0 #8d8880}.dthumbs a.b-revision{box-shadow:0 3px 0 #e7cb9f}.dthumbs a.b-aprobada{box-shadow:0 3px 0 #8faaff}.dthumbs a.b-publicada{box-shadow:0 3px 0 #f3efe8}
+.cal+.month{margin-top:28px}
