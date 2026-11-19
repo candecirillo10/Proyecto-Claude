@@ -4,5 +4,5 @@
 window.APP_CONFIG={
   supabaseUrl:'https://trwzjqxghbcbuqhdnysk.supabase.co',
   supabaseAnonKey:'sb_publishable_rgigFUcuUYG5D8Vk5NX16g_WuHMNHOh',
-  allowSignup:true   // TEMPORAL: ponelo en false después de crear tu cuenta de dueña
+  allowSignup:false  // solo entran cuentas invitadas desde Supabase
 };
