@@ -49,6 +49,37 @@ create policy m_ins  on storage.objects for insert to authenticated with check (
 create policy m_upd  on storage.objects for update to authenticated using (bucket_id='media' and is_owner());
 create policy m_del  on storage.objects for delete to authenticated using (bucket_id='media' and is_owner());
 
+-- 4b) Clientes: no ven borradores; pueden aprobar / pedir cambios
+drop policy if exists docs_read on docs;
+create policy docs_read on docs for select to authenticated using (
+  case
+    when path like 'data/users/%' then path like 'data/users/' || auth.uid() || '/%'
+    when is_owner() then true
+    when jsonb_exists(data, 'assets') then coalesce(data->>'status','borrador') <> 'borrador'
+    else true
+  end);
+
+create or replace function review_item(item_id text, decision text) returns void
+language plpgsql security definer set search_path = public as $$
+declare cur text; found_row boolean;
+begin
+  if auth.uid() is null then raise exception 'auth'; end if;
+  if decision not in ('aprobada','cambios') then raise exception 'decision'; end if;
+  if position('/' in item_id) > 0 then raise exception 'id'; end if;
+  select true, coalesce(data->>'status','borrador') into found_row, cur from docs where path = 'items/' || item_id;
+  if found_row is not true then raise exception 'no existe'; end if;
+  if cur not in ('revision','aprobada','cambios') then raise exception 'estado'; end if;
+  update docs set
+    data = data || jsonb_build_object(
+      'status', decision,
+      'reviewedBy', coalesce((select raw_user_meta_data->>'name' from auth.users where id = auth.uid()), 'Cliente'),
+      'reviewedAt', (extract(epoch from now()) * 1000)::bigint),
+    updated_at = now()
+  where path = 'items/' || item_id;
+end $$;
+revoke all on function review_item(text,text) from public;
+grant execute on function review_item(text,text) to authenticated;
+
 -- 5) Tiempo real
 alter publication supabase_realtime add table docs, comments;
 

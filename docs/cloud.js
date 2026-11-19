@@ -55,6 +55,7 @@ const comments={
   subscribe(f){cmSubs.add(f);return()=>cmSubs.delete(f)},
   async add(target,body){const name=(session.user.user_metadata||{}).name||session.user.email.split('@')[0];
     const {error}=await sb.from('comments').insert({target,body,author_name:name});if(error)throw error;await loadComments()},
+  async review(id,decision){const {error}=await sb.rpc('review_item',{item_id:id,decision});if(error)throw error;notify()},
   async remove(id){const {error}=await sb.from('comments').delete().eq('id',id);if(error)throw error;await loadComments()}
 };
 /* Acceso */

@@ -1,7 +1,7 @@
 
 {
 const DEF=[{id:'historias',name:'Historias',kind:'media',ratio:'9/16'},{id:'posteos',name:'Posteos',kind:'media',ratio:'4/5'},{id:'reels',name:'Reels',kind:'media',ratio:'9/16'},{id:'ideas',name:'Ideas',kind:'notes'}];
-const ST=[['borrador','Borrador'],['revision','En revisión'],['aprobada','Aprobada'],['publicada','Publicada']];
+const ST=[['borrador','Borrador'],['revision','En revisión'],['cambios','Cambios pedidos'],['aprobada','Aprobada'],['publicada','Publicada']];
 const RAT=['9/16','4/5','1/1'];
 const S={db:null,assets:null,uid:null,canEdit:false,config:{brand:'',handle:'',folders:DEF},items:[],priv:[],loaded:false,confirmed:false,filter:'todas',q:'',mode:'grilla',open:null,urls:[],pending:[]};
 try{S.mode=localStorage.getItem('pc-mode')||'grilla'}catch(e){}
@@ -49,7 +49,7 @@ function renderHeader(){
   const rev=media.filter(i=>i.status==='revision').length;
   const p=[];if(S.config.handle)p.push(S.config.handle);
   p.push(media.length+(media.length===1?' publicación':' publicaciones'));
-  if(rev)p.push(rev+' en revisión');
+  if(rev)p.push(rev+' en revisión');const chg=media.filter(i=>i.status==='cambios').length;if(chg)p.push(chg+(chg===1?' con cambios pedidos':' con cambios pedidos'));
   $('#brandSub').textContent=p.join(' · ');
   $('#ownerActions').hidden=!S.canEdit;
 }
@@ -140,7 +140,7 @@ function postView(f,id){
   const head=crumbs([[pf.name,'#'+pf.id],[monthLabel(k),'#'+pf.id+'--'+mk(k)],[title]]);
   const info=`<div class="phead" id="${pid(it.id)}" data-comment-target><div class="ptitle"><h2 class="vtitle">${esc(title)}</h2><div class="row"><span class="chip st-${st}">${stLabel(st)}</span>${it.date?`<span class="msg">Se publica el ${fmtLong(it.date)}</span>`:''}<span class="msg">· ${placas(n)}</span></div></div>
   <div class="row">${ed&&S.assets?'<button type="button" class="primary" data-act="addslides">Agregar placas</button>':''}${ed?`<button type="button" data-act="edit" data-id="${esc(it.id)}">Editar datos</button>`:''}${S.comments?`<button type="button" data-act="comment" data-el="${pid(it.id)}">Comentar publicación</button>`:''}${ed?`<button type="button" class="danger" data-act="pdel" data-id="${esc(it.id)}">Eliminar</button>`:''}</div></div>
-  <p class="msg" id="postMsg" aria-live="polite">${esc(S.postMsg||'')}</p>
+  <p class="msg" id="postMsg" aria-live="polite">${esc(S.postMsg||'')}</p>${reviewBox(it)}
   ${it.copy?`<div class="pcopy"><div class="row" style="justify-content:space-between"><strong>Copy</strong><button type="button" data-act="copy" data-id="${esc(it.id)}">Copiar texto</button></div><pre class="copy">${esc(it.copy)}</pre></div>`:''}`;
   const slides=n?`<div class="grid ${cls(pf)} slides">${as.map((a,j)=>`<div class="slide" id="s-${pid(it.id)}-${j}" data-comment-target><button type="button" class="card" data-act="open" data-id="${esc(it.id)}" data-s="${j}" aria-label="Ver placa ${j+1} de ${n}"><div class="media" style="aspect-ratio:${ratio(pf)}">${thumb(a)}<span class="num">${j+1}</span></div></button>${ed?`<div class="sl-tools"><button type="button" data-act="mv" data-id="${esc(it.id)}" data-s="${j}" data-d="-1"${j===0?' disabled':''} aria-label="Mover antes">←</button><button type="button" data-act="mv" data-id="${esc(it.id)}" data-s="${j}" data-d="1"${j===n-1?' disabled':''} aria-label="Mover después">→</button><button type="button" class="danger" data-act="rmslide" data-id="${esc(it.id)}" data-s="${j}">Quitar</button></div>`:''}</div>`).join('')}</div>`
     :`<div class="empty"><div><h2>Sin placas todavía</h2><p class="msg">${ed?'Agregá las placas de esta publicación.':'Todavía no hay placas en esta publicación.'}</p></div>${ed&&S.assets?'<button type="button" class="primary" data-act="addslides">Agregar placas</button>':''}</div>`;
@@ -153,7 +153,7 @@ function calView(k){
   for(const i of inMonth)if(i.date&&i.date.startsWith(k)){const d=+i.date.slice(8,10);(byDay[d]=byDay[d]||[]).push(i)}
   const months=[...new Set(items.map(monthKey).filter(Boolean).concat([curMonth()]))].sort().reverse();
   const cells='<div class="day out"></div>'.repeat(lead)+Array.from({length:days},(_,d)=>{d++;const its=byDay[d]||[],iso=k+'-'+String(d).padStart(2,'0');
-    const pr=['revision','borrador','aprobada','publicada'].find(s=>its.some(i=>okSt(i.status)===s))||'borrador';
+    const pr=['cambios','revision','borrador','aprobada','publicada'].find(s=>its.some(i=>okSt(i.status)===s))||'borrador';
     return `<div class="day${iso===t?' today':''}${its.length?' has':''}"><span class="dn">${d}</span>${its.length?`<div class="dthumbs">${its.slice(0,3).map(i=>{const f=media.find(x=>x.id===i.folder);return `<a class="b-${okSt(i.status)}" href="${esc(postHref(i))}" title="${esc(f.name+': '+(i.title||'Sin título')+' · '+stLabel(okSt(i.status)))}" style="aspect-ratio:${ratio(f)}">${thumb((i.assets||[])[0])}</a>`}).join('')}${its.length>3?`<button type="button" class="more" data-act="day" data-d="${iso}">+${its.length-3}</button>`:''}</div><button type="button" class="dcount" data-act="day" data-d="${iso}" aria-label="Ver ${pubs(its.length)} del ${d}"><span class="st-${pr}">${its.length}</span></button>`:''}</div>`}).join('');
   const list=inMonth.slice().sort(asc),up=t;
   const sections=list.length?`<section class="month"><h2 class="mhead">Agenda del mes<span>${pubs(list.length)}</span></h2><div class="daylist">${list.map(i=>{const f=media.find(x=>x.id===i.folder),st=okSt(i.status),n=(i.assets||[]).length,past=i.date&&i.date<up&&st!=='publicada';
@@ -256,8 +256,14 @@ function openDetail(id,slide){
   const nav=as.length>1?`<button type="button" class="nav l" data-act="slide" data-id="${esc(id)}" data-s="${slide-1}"${slide===0?' disabled':''} aria-label="Placa anterior">‹</button><button type="button" class="nav r" data-act="slide" data-id="${esc(id)}" data-s="${slide+1}"${slide===as.length-1?' disabled':''} aria-label="Placa siguiente">›</button><div class="dots">${as.map((_,k)=>`<i class="${k===slide?'on':''}"></i>`).join('')}</div>`:'';
   const el=`s-${pid(id)}-${slide}`;
   const cbtn=S.comments?`<div class="cbox"><button type="button" class="primary" data-act="comment" data-el="${el}">Comentar esta placa</button><p class="msg">${S.canEdit?'Dejá una nota sobre esta placa. Tu cliente también la puede ver.':'Contanos qué te gusta o qué cambiarías. Tu comentario queda pegado a esta placa.'}</p></div>`:'';
-  openSheet(`<div class="detail"><div class="viewer" style="aspect-ratio:${ratio(f)}">${media}${nav}</div><div class="side"><p class="msg">Placa ${slide+1} de ${as.length}</p>${viewSide(it,f)}${cbtn}</div></div>`);
+  openSheet(`<div class="detail"><div class="viewer" style="aspect-ratio:${ratio(f)}">${media}${nav}</div><div class="side"><p class="msg">Placa ${slide+1} de ${as.length}</p>${viewSide(it,f)}${reviewBox(it)}${cbtn}</div></div>`);
   S.open={id,slide};
+}
+function reviewBox(it){
+  if(S.canEdit||!S.cm)return '';const st=okSt(it.status);
+  if(!['revision','aprobada','cambios'].includes(st))return `<p class="msg">${st==='publicada'?'Esta publicación ya fue publicada.':'Todavía no está lista para revisar.'}</p>`;
+  const who=it.reviewedBy&&st!=='revision'?' ('+esc(it.reviewedBy)+')':'';
+  return `<div class="cbox"><p class="msg">${st==='aprobada'?'Aprobaste esta publicación'+who+'.':st==='cambios'?'Pediste cambios en esta publicación'+who+'.':'¿Está lista para publicar?'}</p><div class="row"><button type="button" class="primary" data-act="approve" data-id="${esc(it.id)}"${st==='aprobada'?' disabled':''}>Aprobar</button><button type="button" data-act="changes" data-id="${esc(it.id)}">Pedir cambios</button></div><p class="msg rvmsg" aria-live="polite"></p></div>`;
 }
 function viewSide(it,f){const st=okSt(it.status);
   return `<p class="msg">${esc(f.name)}${it.date?' · '+fmt(it.date):''}</p><h2>${esc(it.title||'Sin título')}</h2><div><span class="chip st-${st}">${stLabel(st)}</span></div>${it.copy?`<div><div class="row" style="justify-content:space-between"><strong>Copy</strong><button type="button" data-act="copy" data-id="${esc(it.id)}">Copiar texto</button></div><pre class="copy">${esc(it.copy)}</pre></div>`:''}`;
@@ -340,6 +346,8 @@ document.addEventListener('click',async e=>{
     try{await S.comments.openComposer({element:el})}catch(err){if(err&&(err.code==='unavailable'||err.code==='not_granted')){S.comments=null;barKey='';renderView()}}}
   else if(a==='ndel')$('#ntMsg').innerHTML='¿Eliminar esta idea? <button type="button" class="danger" data-act="ndelyes">Sí, eliminar</button> <button type="button" data-act="no">No</button>';
   else if(a==='ndelyes'){const fm=$('#noteForm');try{await noteRef(fm.dataset.id,fm.dataset.p==='1').delete();closeSheet()}catch(err){$('#ntMsg').textContent=dbErr(err)}}
+  else if(a==='approve'){t.disabled=true;try{await S.cm.review(t.dataset.id,'aprobada');S.postMsg='Listo: aprobaste esta publicación.';closeSheet();renderView()}catch(_){t.disabled=false;document.querySelectorAll('.rvmsg').forEach(m=>m.textContent='No se pudo guardar. Probá de nuevo.')}}
+  else if(a==='changes'){closeSheet();openSheet(`<h2>Pedir cambios</h2><form id="chForm" data-id="${esc(t.dataset.id)}" class="form"><label class="f">¿Qué habría que modificar? <textarea id="chText" maxlength="1800" required placeholder="Ej.: cambiar el texto de arriba, usar otro color de fondo…"></textarea></label><p class="msg" id="chMsg"></p><div class="row end"><button type="button" data-act="close">Cancelar</button><button class="primary" type="submit">Enviar</button></div></form>`,'sm')}
   else if(a==='cmdel'){try{await S.cm.remove(+t.dataset.id)}catch(_){}}
   else if(a==='no')t.parentElement.textContent='';
 });
@@ -347,6 +355,8 @@ document.addEventListener('submit',async e=>{
   e.preventDefault();const fm=e.target,btn=fm.querySelector('button[type=submit]');
   if(fm.id==='upForm')return doUpload();
   if(fm.id==='setForm')return saveSettings(fm);
+  if(fm.id==='chForm'){const tx=$('#chText'),b=tx.value.trim(),id=fm.dataset.id;if(!b){tx.focus();return}btn.disabled=true;
+    try{await S.cm.add(pid(id),'Cambios pedidos: '+b);await S.cm.review(id,'cambios');S.postMsg='Enviaste tus cambios. Gracias.';closeSheet();renderView()}catch(_){$('#chMsg').textContent='No se pudo enviar. Probá de nuevo.';btn.disabled=false}return}
   if(fm.id==='cmForm'){const tx=$('#cmText'),b=tx.value.trim();if(!b){tx.focus();return}btn.disabled=true;try{await S.cm.add(S.cmOpen,b);tx.value=''}catch(_){$('#cmMsg').textContent='No se pudo enviar. Probá de nuevo.'}btn.disabled=false;return}
   if(fm.id==='composer'){const text=$('#nText').value.trim();if(!text){$('#nText').focus();return}
     btn.disabled=true;const doc={folder:cur().id,title:$('#nTitle').value.trim(),text,created:Date.now()};

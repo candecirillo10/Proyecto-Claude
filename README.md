@@ -22,6 +22,10 @@ npm run ios               # abre Xcode -> Run / Archive
 ```
 Cambiá `appId` y `appName` en `capacitor.config.json` antes de publicar en las tiendas. Los íconos nativos se generan con `@capacitor/assets` a partir de `www/icons/icon-512.png`.
 
+## Roles
+- **Dueña (tu cuenta):** edita todo.
+- **Cliente:** ve las publicaciones (no los borradores), puede **Aprobar** o **Pedir cambios** (con un texto de qué modificar) y comentar cada publicación o placa. No puede editar, subir ni borrar. Las reglas están en `supabase/schema.sql`; si ya habías ejecutado una versión anterior, ejecutá solo `supabase/update-1-revision.sql`.
+
 ## Copias de seguridad
 Ajustes (“Editar marca y carpetas”) → Exportar / Importar copia (JSON).
 

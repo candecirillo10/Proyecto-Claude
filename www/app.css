@@ -193,3 +193,7 @@ a.fchip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .dcount span.st-borrador{background:#8d8880;color:#0d0d0d}.dcount span.st-revision{background:#e7cb9f;color:#0d0d0d}.dcount span.st-aprobada{background:#8faaff;color:#0d0d0d}.dcount span.st-publicada{background:#f3efe8;color:#0d0d0d}
 .dthumbs a.b-borrador{box-shadow:0 3px 0 #8d8880}.dthumbs a.b-revision{box-shadow:0 3px 0 #e7cb9f}.dthumbs a.b-aprobada{box-shadow:0 3px 0 #8faaff}.dthumbs a.b-publicada{box-shadow:0 3px 0 #f3efe8}
 .cal+.month{margin-top:28px}
+
+.st-cambios{background:rgba(255,138,118,.16);color:#ff8a76}
+.dot.st-cambios{background:#ff8a76}.dot2.st-cambios{background:#ff8a76}
+.dcount span.st-cambios{background:#ff8a76;color:#0d0d0d}.dthumbs a.b-cambios{box-shadow:0 3px 0 #ff8a76}
