@@ -2,6 +2,7 @@
    Misma interfaz que local.js. Solo se activa si config.js tiene supabaseUrl. */
 (()=>{
 const C=window.APP_CONFIG;if(!C||!C.supabaseUrl||!window.supabase)return;
+const needPw=/type=(invite|recovery)/.test(location.hash);  // llegó desde un correo de invitación o de recuperación
 document.documentElement.dataset.mode='cloud';
 const sb=supabase.createClient(C.supabaseUrl,C.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true}});
 const err=code=>Object.assign(new Error(code),{code});
@@ -78,9 +79,17 @@ function loginUI(){return new Promise(res=>{
       if(!r.data.session){m.textContent='Revisá tu correo para confirmar la cuenta y después ingresá.';signup=false;return}
       session=r.data.session;el.remove();res()}};
   draw();document.body.append(el)})}
+function passwordUI(){return new Promise(res=>{
+  const el=document.createElement('div');el.className='ov';el.style.zIndex=50;
+  el.innerHTML=`<div class="sheet sm"><h2>Elegí tu contraseña</h2><form class="form" id="pf"><p class="msg">Con esta contraseña vas a entrar la próxima vez.</p><label class="f">Contraseña nueva <input id="pp" type="password" minlength="6" autocomplete="new-password" required></label><p class="msg" id="pm" aria-live="polite"></p><button class="primary" type="submit">Guardar y entrar</button></form></div>`;
+  el.querySelector('#pf').onsubmit=async ev=>{ev.preventDefault();const m=el.querySelector('#pm');m.textContent='Un momento…';
+    const {error}=await sb.auth.updateUser({password:el.querySelector('#pp').value});
+    if(error){m.textContent='No se pudo guardar: '+error.message;return}el.remove();res()};
+  document.body.append(el)})}
 async function boot(){
   const {data}=await sb.auth.getSession();session=data.session;
   if(!session)await loginUI();
+  else if(needPw)await passwordUI();
   try{const r=await sb.rpc('is_owner');owner=r.data===true}catch(_){owner=false}
   await loadComments();
   sb.channel('live').on('postgres_changes',{event:'*',schema:'public',table:'docs'},notify)

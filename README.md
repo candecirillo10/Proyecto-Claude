@@ -26,6 +26,12 @@ Cambiá `appId` y `appName` en `capacitor.config.json` antes de publicar en las 
 - **Dueña (tu cuenta):** edita todo.
 - **Cliente:** ve las publicaciones (no los borradores), puede **Aprobar** o **Pedir cambios** (con un texto de qué modificar) y comentar cada publicación o placa. No puede editar, subir ni borrar. Las reglas están en `supabase/schema.sql`; si ya habías ejecutado una versión anterior, ejecutá solo `supabase/update-1-revision.sql`.
 
+## Solo clientes invitados (configuración actual: `allowSignup:false`)
+1. Supabase → **Authentication → Sign In / Providers** (o *Settings*) → desactivá **"Allow new users to sign up"**. Esto es lo que realmente cierra el registro; ocultar el botón en la app no alcanza.
+2. Para sumar un cliente: **Authentication → Users → Invite user**, con su email. Le llega un correo; al tocar el enlace entra a la app y elige su contraseña.
+3. Si un cliente olvida la contraseña, usa "Olvidé mi contraseña" en la pantalla de ingreso.
+4. Tu propia cuenta: creala *antes* de desactivar el registro (o invitate a vos misma desde el panel).
+
 ## Copias de seguridad
 Ajustes (“Editar marca y carpetas”) → Exportar / Importar copia (JSON).
 

@@ -4,5 +4,5 @@
 window.APP_CONFIG={
   supabaseUrl:'',
   supabaseAnonKey:'',
-  allowSignup:true   // false = solo entran cuentas que invites desde el panel de Supabase
+  allowSignup:false  // false = solo entran cuentas que invites desde el panel de Supabase (true = cualquiera puede crear cuenta)
 };
