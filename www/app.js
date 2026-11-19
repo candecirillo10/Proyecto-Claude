@@ -56,13 +56,14 @@ function renderHeader(){
 }
 function avatarInner(){return S.config.avatar?`<img src="${blob(S.config.avatar)}" alt="">`:esc(((S.config.brand||'Tu marca').trim()[0]||'T').toUpperCase())}
 const avZoom=()=>Math.min(300,Math.max(50,+S.config.avatarZoom||100));
-function applyAv(el,zm){if(!el)return;el.style.setProperty('--avz',zm/100)}
-function avRow(){return `<div class="avatar" id="sAv" style="--avz:${avZoom()/100}">${avatarInner()}</div><div class="form" style="gap:8px;flex:1 1 220px"><div class="row">${S.assets?`<button type="button" data-act="pickav">${S.config.avatar?'Cambiar foto':'Subir foto'}</button>`:''}${S.config.avatar?'<button type="button" class="danger" data-act="rmav">Quitar</button>':''}</div><p class="msg" id="avMsg">Foto de perfil de la marca. Se ve redonda, como en Instagram.</p></div>
+const avX=()=>Math.min(1,Math.max(-1,+S.config.avatarX||0)),avY=()=>Math.min(1,Math.max(-1,+S.config.avatarY||0));
+function applyAv(el,zm,x,y){if(!el)return;el.style.setProperty('--avz',(zm==null?avZoom():zm)/100);el.style.setProperty('--avx',x==null?avX():x);el.style.setProperty('--avy',y==null?avY():y)}
+function avRow(){return `<div class="avatar" id="sAv" style="--avz:${avZoom()/100};--avx:${avX()};--avy:${avY()}">${avatarInner()}</div><div class="form" style="gap:8px;flex:1 1 220px"><div class="row">${S.assets?`<button type="button" data-act="pickav">${S.config.avatar?'Cambiar foto':'Subir foto'}</button>`:''}${S.config.avatar?'<button type="button" data-act="avreset">Centrar</button><button type="button" class="danger" data-act="rmav">Quitar</button>':''}</div><p class="msg" id="avMsg">${S.config.avatar?'Arrastrá la foto con el dedo para moverla. Pellizcá con dos dedos (o usá la barra) para agrandar o achicar.':'Foto de perfil de la marca. Se ve redonda, como en Instagram.'}</p></div>
 ${S.config.avatar?`<div class="avctl"><label for="avZoom">Tamaño de la foto <input type="range" id="avZoom" min="50" max="300" step="5" value="${avZoom()}"><output id="avZoomOut">${avZoom()}%</output></label></div>`:''}`}
 async function saveConfig(patch){
   const ref=S.db.doc('config/main');
   try{await ref.update(patch)}catch(e){
-    if(e&&e.code==='invalid_argument'){const d=await ref.get().catch(()=>null);if(d&&d.exists)throw e;await ref.set({brand:S.config.brand,handle:S.config.handle,folders:S.config.folders,avatar:S.config.avatar||'',avatarZoom:avZoom(),...patch})}else throw e}
+    if(e&&e.code==='invalid_argument'){const d=await ref.get().catch(()=>null);if(d&&d.exists)throw e;await ref.set({brand:S.config.brand,handle:S.config.handle,folders:S.config.folders,avatar:S.config.avatar||'',avatarZoom:avZoom(),avatarX:avX(),avatarY:avY(),...patch})}else throw e}
   Object.assign(S.config,patch);renderHeader();renderTabs();
 }
 async function setAvatar(file){
@@ -388,6 +389,7 @@ document.addEventListener('click',async e=>{
   else if(a==='delyes')delItem(t.dataset.id);
   else if(a==='pickav')$('#avFile').click();
   else if(a==='rmav')removeAvatar();
+  else if(a==='avreset'){try{await saveConfig({avatarX:0,avatarY:0,avatarZoom:100});$('#avWrap').innerHTML=avRow();renderHeader()}catch(err){$('#avMsg').textContent=dbErr(err)}}
   else if(a==='comment'){const el=document.getElementById(t.dataset.el||pid(t.dataset.id));closeSheet();if(!el||!S.comments)return;
     el.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
     try{await S.comments.openComposer({element:el})}catch(err){if(err&&(err.code==='unavailable'||err.code==='not_granted')){S.comments=null;barKey='';renderView()}}}
@@ -435,6 +437,25 @@ document.addEventListener('change',async e=>{
 });
 $('#avFile').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)setAvatar(f)});
 $('#avatar').addEventListener('keydown',e=>{if(S.canEdit&&(e.key==='Enter'||e.key===' ')){e.preventDefault();openSettings(false)}});
+const gp=new Map(),cl=(v,a,b)=>Math.min(b,Math.max(a,v));let g=null;
+function avLive(){applyAv($('#sAv'),g.z,g.x,g.y);applyAv($('#avatar'),g.z,g.x,g.y);const s=$('#avZoom');if(s)s.value=Math.round(g.z);const o=$('#avZoomOut');if(o)o.textContent=Math.round(g.z)+'%'}
+document.addEventListener('pointerdown',e=>{const el=e.target.closest('#sAv');if(!el||!S.config.avatar)return;
+  try{el.setPointerCapture(e.pointerId)}catch(_){}
+  gp.set(e.pointerId,{x:e.clientX,y:e.clientY});S.avDrag=true;
+  if(!g)g={x:avX(),y:avY(),z:avZoom(),d:0,z0:avZoom(),size:el.getBoundingClientRect().width||140};
+  if(gp.size===2){const [a,b]=[...gp.values()];g.d=Math.hypot(a.x-b.x,a.y-b.y);g.z0=g.z}
+  e.preventDefault()});
+document.addEventListener('pointermove',e=>{if(!g||!gp.has(e.pointerId))return;
+  const p=gp.get(e.pointerId),dx=e.clientX-p.x,dy=e.clientY-p.y;gp.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(gp.size===1){g.x=cl(g.x+dx/g.size,-1,1);g.y=cl(g.y+dy/g.size,-1,1)}
+  else if(gp.size===2&&g.d){const [a,b]=[...gp.values()];g.z=cl(g.z0*Math.hypot(a.x-b.x,a.y-b.y)/g.d,50,300)}
+  avLive()});
+async function avEnd(e){if(!gp.has(e.pointerId))return;gp.delete(e.pointerId);if(g)g.d=0;
+  if(gp.size===0&&g){const v=g;g=null;try{await saveConfig({avatarX:Math.round(v.x*1000)/1000,avatarY:Math.round(v.y*1000)/1000,avatarZoom:Math.round(v.z)});const m=$('#avMsg');if(m)m.textContent='Posición guardada.'}catch(err){const m=$('#avMsg');if(m)m.textContent=dbErr(err)}S.avDrag=false;renderHeader()}}
+document.addEventListener('pointerup',avEnd);document.addEventListener('pointercancel',avEnd);
+document.addEventListener('wheel',e=>{const el=e.target.closest('#sAv');if(!el||!S.config.avatar)return;e.preventDefault();
+  const z=cl(avZoom()*(e.deltaY<0?1.06:.94),50,300);S.config.avatarZoom=Math.round(z);applyAv($('#sAv'),z);applyAv($('#avatar'),z);const s=$('#avZoom');if(s)s.value=Math.round(z);const o=$('#avZoomOut');if(o)o.textContent=Math.round(z)+'%';
+  clearTimeout(S.wt);S.wt=setTimeout(()=>saveConfig({avatarZoom:Math.round(z)}).catch(()=>{}),500)},{passive:false});
 const view=$('#view');
 view.addEventListener('dragover',e=>{if(S.canEdit&&S.assets&&!route().cal&&cur().kind==='media'){e.preventDefault();view.classList.add('dragging')}});
 view.addEventListener('dragleave',e=>{if(!view.contains(e.relatedTarget))view.classList.remove('dragging')});
@@ -454,7 +475,7 @@ async function start(){
   try{S.cm=await claude.use('comments');S.comments={openComposer:openComments};S.cm.subscribe(()=>{renderTabs();decorate();if(S.cmOpen)drawComments()})}catch(_){}
   render();
   const timer=setTimeout(()=>{if(!S.confirmed){S.slow=true;renderView()}},10000);
-  db.doc('config/main').onSnapshot(s=>{const d=s.exists?s.data():null;const fs=Array.isArray(d?.folders)?d.folders.filter(f=>f&&typeof f.id==='string'&&f.name):[];S.config={brand:d?.brand||'',handle:d?.handle||'',avatar:typeof d?.avatar==='string'?d.avatar:'',avatarZoom:+d?.avatarZoom||100,folders:fs.length?fs:DEF};render()},()=>{});
+  db.doc('config/main').onSnapshot(s=>{const d=s.exists?s.data():null;const fs=Array.isArray(d?.folders)?d.folders.filter(f=>f&&typeof f.id==='string'&&f.name):[];S.config={brand:d?.brand||'',handle:d?.handle||'',avatar:typeof d?.avatar==='string'?d.avatar:'',avatarZoom:+d?.avatarZoom||100,avatarX:+d?.avatarX||0,avatarY:+d?.avatarY||0,folders:fs.length?fs:DEF};render()},()=>{});
   db.collection('items').onSnapshot(s=>{S.items=s.docs.map(d=>({...d.data(),id:d.id}));S.loaded=true;if(!s.metadata.fromCache){S.confirmed=true;S.slow=false;clearTimeout(timer)}render()},(e)=>{S.loaded=true;S.confirmed=true;clearTimeout(timer);S.err='No se pudo cargar el contenido. Volvé a abrir la página en un rato.'+(e&&(e.message||e.code)?' Detalle: '+(e.message||e.code):'');render()});
   if(S.uid){try{db.collection('data/users/'+S.uid).onSnapshot(s=>{S.priv=s.docs.map(d=>({...d.data(),id:d.id,private:true}));render()},()=>{})}catch(_){}}
 }

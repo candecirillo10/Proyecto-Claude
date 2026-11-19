@@ -197,3 +197,7 @@ a.fchip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .st-cambios{background:rgba(255,138,118,.16);color:#ff8a76}
 .dot.st-cambios{background:#ff8a76}.dot2.st-cambios{background:#ff8a76}
 .dcount span.st-cambios{background:#ff8a76;color:#0d0d0d}.dthumbs a.b-cambios{box-shadow:0 3px 0 #ff8a76}
+
+.avatar img{transform:translate(calc(var(--avx,0)*100%),calc(var(--avy,0)*100%)) scale(var(--avz,1));transform-origin:center}
+.avrow #sAv{width:150px;height:150px;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.avrow #sAv:active{cursor:grabbing}.avrow #sAv img{pointer-events:none;-webkit-user-drag:none}
