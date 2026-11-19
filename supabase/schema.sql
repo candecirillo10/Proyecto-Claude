@@ -39,9 +39,9 @@ create policy c_read on comments for select to authenticated using (true);
 create policy c_ins  on comments for insert to authenticated with check (author_id = auth.uid());
 create policy c_del  on comments for delete to authenticated using (author_id = auth.uid() or is_owner());
 
--- 4) Archivos (privado, 20 MB por archivo)
+-- 4) Archivos (privado, 50 MB por archivo)
 insert into storage.buckets(id,name,public,file_size_limit)
-  values ('media','media',false,20971520) on conflict (id) do nothing;
+  values ('media','media',false,52428800) on conflict (id) do nothing;
 drop policy if exists m_read on storage.objects; drop policy if exists m_ins on storage.objects;
 drop policy if exists m_upd on storage.objects;  drop policy if exists m_del on storage.objects;
 create policy m_read on storage.objects for select to authenticated using (bucket_id='media');

@@ -37,7 +37,7 @@ const fmtTs=t=>t?new Date(t).toLocaleDateString('es-AR',{day:'numeric',month:'sh
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const stOpts=v=>ST.map(([k,l])=>`<option value="${k}"${k===v?' selected':''}>${l}</option>`).join('');
 const dbErr=e=>e&&e.code==='quota_exceeded'?'Se llenó el espacio de la app. Borrá contenido viejo para seguir.':e&&e.code==='invalid_argument'?'No tenés permiso para guardar cambios.':'No se pudo guardar. Probá de nuevo.';
-const upErr=e=>({too_large:'Uno de los archivos pesa más de 20 MB.',unsupported_type:'Uno de los archivos tiene un formato no compatible.',quota_or_state:'Se llenó el espacio de almacenamiento. Borrá placas viejas para subir nuevas.',rate_limited:'Demasiadas subidas seguidas. Esperá un momento y probá de nuevo.'})[e&&e.code]||'No se pudo subir. Probá de nuevo.';
+const upErr=e=>({too_large:'Uno de los archivos pesa más de 50 MB.',unsupported_type:'Uno de los archivos tiene un formato no compatible.',quota_or_state:'Se llenó el espacio de almacenamiento. Borrá placas viejas para subir nuevas.',rate_limited:'Demasiadas subidas seguidas. Esperá un momento y probá de nuevo.'})[e&&e.code]||'No se pudo subir. Probá de nuevo.';
 
 function render(){renderHeader();renderTabs();renderView()}
 function decorate(){if(!S.cm)return;document.querySelectorAll('[data-act=comment]').forEach(b=>{const el=b.dataset.el||pid(b.dataset.id);b.dataset.base=b.dataset.base||b.textContent;const n=S.cm.count(el);b.textContent=b.dataset.base+(n?' ('+n+')':'')})}
@@ -70,7 +70,7 @@ async function setAvatar(file){
   const m=$('#avMsg');if(!S.assets||!m)return;
   const type=/^image\/(png|jpeg|webp|gif)$/.test(file.type)?file.type:extType(file.name);
   if(!type||!type.startsWith('image/')){m.textContent='Elegí una imagen PNG, JPG, WEBP o GIF.';return}
-  if(file.size>20971520){m.textContent='La imagen pesa más de 20 MB.';return}
+  if(file.size>52428800){m.textContent='La imagen pesa más de 50 MB.';return}
   m.textContent='Subiendo foto…';let r;
   try{const sx=await shrink(file,type,1024);r=await S.assets.upload(sx.file,{type:sx.type})}catch(e){m.textContent=upErr(e);return}
   const old=S.config.avatar;
@@ -242,13 +242,13 @@ const extType=n=>({png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'imag
 function openUpload(files){
   const r=route(),f=cur();if(r.cal||f.kind!=='media'||!S.assets||!files.length)return;
   const list=files.map(x=>({file:x,type:OK.test(x.type)?x.type:extType(x.name)}));
-  const good=list.filter(x=>x.type&&x.file.size<=20971520),bad=list.length-good.length;
-  if(!good.length){openSheet('<h2>No se pueden subir esos archivos</h2><p class="msg">Usá imágenes PNG, JPG, WEBP o GIF, o videos MP4 o WEBM de hasta 20 MB.</p><div class="row end" style="margin-top:18px"><button class="primary" type="button" data-act="close">Entendido</button></div>','sm');return}
+  const good=list.filter(x=>x.type&&x.file.size<=52428800),bad=list.length-good.length;
+  if(!good.length){openSheet('<h2>No se pueden subir esos archivos</h2><p class="msg">Usá imágenes PNG, JPG, WEBP o GIF, o videos MP4 o WEBM de hasta 50 MB.</p><div class="row end" style="margin-top:18px"><button class="primary" type="button" data-act="close">Entendido</button></div>','sm');return}
   S.pending=good;const urls=good.map(x=>URL.createObjectURL(x.file)),n=good.length;
   const date=r.month&&r.month!==curMonth()?r.month+'-01':today(),car=ratio(f)!=='9/16';
   const mf=folders().filter(x=>x.kind==='media');
   openSheet(`<h2>Subir a ${esc(f.name)}</h2><div class="thumbs">${good.map((x,k)=>x.type.startsWith('video')?`<video src="${urls[k]}" muted></video>`:`<img src="${urls[k]}" alt="">`).join('')}</div>
-  ${bad?`<p class="msg err" style="margin-bottom:12px">Se omitieron ${bad} archivo(s): formato no compatible o más de 20 MB.</p>`:''}
+  ${bad?`<p class="msg err" style="margin-bottom:12px">Se omitieron ${bad} archivo(s): formato no compatible o más de 50 MB.</p>`:''}
   <form id="upForm" class="form">
   ${n>1?`<fieldset class="radios"><legend>¿Cómo las subo?</legend><label class="check"><input type="radio" name="uMode" value="one"${car?' checked':''}> Una sola publicación con ${n} placas (carrusel)</label><label class="check"><input type="radio" name="uMode" value="many"${car?'':' checked'}> ${n} publicaciones separadas</label></fieldset>`:''}
   <label class="f">Título de la publicación <input id="uTitle" maxlength="120" placeholder="Ej.: Carrusel beneficios del corte"></label>
@@ -275,8 +275,8 @@ async function doUpload(){
 }
 async function addSlides(id,files){
   const it=S.items.find(i=>i.id===id);if(!it||!S.assets)return;
-  const list=files.map(x=>({file:x,type:OK.test(x.type)?x.type:extType(x.name)})).filter(x=>x.type&&x.file.size<=20971520);
-  if(!list.length){S.postMsg='Usá imágenes PNG, JPG, WEBP o GIF, o videos MP4 o WEBM de hasta 20 MB.';renderView();return}
+  const list=files.map(x=>({file:x,type:OK.test(x.type)?x.type:extType(x.name)})).filter(x=>x.type&&x.file.size<=52428800);
+  if(!list.length){S.postMsg='Usá imágenes PNG, JPG, WEBP o GIF, o videos MP4 o WEBM de hasta 50 MB.';renderView();return}
   const up=[];
   try{for(let k=0;k<list.length;k++){S.postMsg=`Subiendo ${k+1} de ${list.length}…`;renderView();const sx=await shrink(list[k].file,list[k].type);const r=await S.assets.upload(sx.file,{type:sx.type});up.push({id:r.id,video:String(r.contentType).startsWith('video')})}
     const fresh=S.items.find(i=>i.id===id)||it;await S.db.doc('items/'+id).update({assets:[...(fresh.assets||[]),...up]});S.postMsg=`Listo: se ${up.length===1?'agregó 1 placa':'agregaron '+up.length+' placas'}.`}

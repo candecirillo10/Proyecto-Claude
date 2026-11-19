@@ -27,7 +27,7 @@ const colRef=c=>({
 const db={doc:docRef,collection:colRef};
 const err=(code)=>Object.assign(new Error(code),{code});
 const assets={
-  async upload(file,{type}={}){if(file.size>20971520)throw err('too_large');const id=rid().slice(1)+rid().slice(1,8);const ct=type||file.type;
+  async upload(file,{type}={}){if(file.size>52428800)throw err('too_large');const id=rid().slice(1)+rid().slice(1,8);const ct=type||file.type;
     try{await tx(BLOBS,'readwrite',t=>t.objectStore(BLOBS).put({blob:file,type:ct},id))}catch(e){throw err('quota_or_state')}
     urls.set(id,URL.createObjectURL(new Blob([file],{type:ct})));return {id,contentType:ct}},
   async delete(id){await tx(BLOBS,'readwrite',t=>t.objectStore(BLOBS).delete(id));const u=urls.get(id);if(u){URL.revokeObjectURL(u);urls.delete(id)}}

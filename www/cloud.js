@@ -40,7 +40,7 @@ const colRef=c=>({
 const db={doc:docRef,collection:colRef};
 const assets={
   async upload(file,{type}={}){
-    if(file.size>20971520)throw err('too_large');
+    if(file.size>52428800)throw err('too_large');
     const id=crypto.randomUUID().replace(/-/g,'');const ct=type||file.type;
     const {error}=await sb.storage.from('media').upload(id,file,{contentType:ct});
     if(error)throw err(/quota|limit|size/i.test(error.message)?'quota_or_state':'upload');
