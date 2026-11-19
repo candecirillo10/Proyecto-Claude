@@ -238,12 +238,14 @@ async function shrink(file,type,max){
   return {file,type};
 }
 const OK=/^(image\/(png|jpeg|webp|gif)|video\/(mp4|webm))$/;
-const extType=n=>({png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',gif:'image/gif',mp4:'video/mp4',webm:'video/webm'})[(n.split('.').pop()||'').toLowerCase()];
+const extType=n=>({png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',gif:'image/gif',mp4:'video/mp4',m4v:'video/mp4',mov:'video/mp4',webm:'video/webm'})[(n.split('.').pop()||'').toLowerCase()];
+// Los videos del iPhone son .MOV (video/quicktime): mismo contenedor que MP4, se guardan como MP4.
+const norm=x=>{const t=(x.type==='video/quicktime'||x.type==='video/x-m4v')?'video/mp4':x.type;return OK.test(t)?t:extType(x.name)};
 function openUpload(files){
   const r=route(),f=cur();if(r.cal||f.kind!=='media'||!S.assets||!files.length)return;
-  const list=files.map(x=>({file:x,type:OK.test(x.type)?x.type:extType(x.name)}));
+  const list=files.map(x=>({file:x,type:norm(x)}));
   const good=list.filter(x=>x.type&&x.file.size<=52428800),bad=list.length-good.length;
-  if(!good.length){openSheet('<h2>No se pueden subir esos archivos</h2><p class="msg">Usá imágenes PNG, JPG, WEBP o GIF, o videos MP4 o WEBM de hasta 50 MB.</p><div class="row end" style="margin-top:18px"><button class="primary" type="button" data-act="close">Entendido</button></div>','sm');return}
+  if(!good.length){openSheet('<h2>No se pueden subir esos archivos</h2><p class="msg">Usá imágenes PNG, JPG, WEBP o GIF, o videos MP4, MOV o WEBM de hasta 50 MB.</p><div class="row end" style="margin-top:18px"><button class="primary" type="button" data-act="close">Entendido</button></div>','sm');return}
   S.pending=good;const urls=good.map(x=>URL.createObjectURL(x.file)),n=good.length;
   const date=r.month&&r.month!==curMonth()?r.month+'-01':today(),car=ratio(f)!=='9/16';
   const mf=folders().filter(x=>x.kind==='media');
@@ -275,8 +277,8 @@ async function doUpload(){
 }
 async function addSlides(id,files){
   const it=S.items.find(i=>i.id===id);if(!it||!S.assets)return;
-  const list=files.map(x=>({file:x,type:OK.test(x.type)?x.type:extType(x.name)})).filter(x=>x.type&&x.file.size<=52428800);
-  if(!list.length){S.postMsg='Usá imágenes PNG, JPG, WEBP o GIF, o videos MP4 o WEBM de hasta 50 MB.';renderView();return}
+  const list=files.map(x=>({file:x,type:norm(x)})).filter(x=>x.type&&x.file.size<=52428800);
+  if(!list.length){S.postMsg='Usá imágenes PNG, JPG, WEBP o GIF, o videos MP4, MOV o WEBM de hasta 50 MB.';renderView();return}
   const up=[];
   try{for(let k=0;k<list.length;k++){S.postMsg=`Subiendo ${k+1} de ${list.length}…`;renderView();const sx=await shrink(list[k].file,list[k].type);const r=await S.assets.upload(sx.file,{type:sx.type});up.push({id:r.id,video:String(r.contentType).startsWith('video')})}
     const fresh=S.items.find(i=>i.id===id)||it;await S.db.doc('items/'+id).update({assets:[...(fresh.assets||[]),...up]});S.postMsg=`Listo: se ${up.length===1?'agregó 1 placa':'agregaron '+up.length+' placas'}.`}
