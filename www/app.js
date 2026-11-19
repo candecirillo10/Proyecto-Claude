@@ -120,12 +120,11 @@ function monthsView(f){
     return `<a class="mcard" href="#${esc(f.id)}--${mk(k)}"><div class="mcover n${cv.length}">${cv.length?cv.map(a=>`<div>${thumb(a)}</div>`).join(''):'<div class="mempty">Vacío</div>'}</div><div class="minfo"><h3>${monthLabel(k)}</h3><p class="msg">${its.length?pubs(its.length)+' · '+placas(sl):'Todavía sin publicaciones'}</p></div></a>`}).join('')}</div>`;
 }
 function filterBar(){
-  return `<div class="bar"><div class="chips" role="group" aria-label="Filtrar por estado">${[['todas','Todas'],...ST].map(([k,l])=>`<button type="button" class="fchip${S.filter===k?' on':''}" data-act="filter" data-v="${k}" aria-pressed="${S.filter===k}">${l}</button>`).join('')}</div>
-  <div class="seg" role="group" aria-label="Vista">${[['grilla','Grilla'],['feed','Feed']].map(([k,l])=>`<button type="button" class="${S.mode===k?'on':''}" data-act="mode" data-v="${k}" aria-pressed="${S.mode===k}">${l}</button>`).join('')}</div></div>`;
+  return `<div class="bar"><div class="chips" role="group" aria-label="Filtrar por estado">${[['todas','Todas'],...ST].map(([k,l])=>`<button type="button" class="fchip${S.filter===k?' on':''}" data-act="filter" data-v="${k}" aria-pressed="${S.filter===k}">${l}</button>`).join('')}</div></div>`;
 }
 function monthView(f,k){
   if(!S.loaded)return skeleton(f);
-  let list=inFolder(f.id).filter(i=>monthKey(i)===k).sort(asc);const total=list.length,ed=S.canEdit&&S.assets,feed=S.mode==='feed';
+  let list=inFolder(f.id).filter(i=>monthKey(i)===k).sort(asc);const total=list.length,ed=S.canEdit&&S.assets,feed=false;
   const head=crumbs([[f.name,'#'+f.id],[monthLabel(k)]])+`<div class="bar"><div><h2 class="vtitle">${monthLabel(k)}</h2><p class="msg">${esc(f.name)}${total?' · '+pubs(total):''}</p></div>${ed?`<button type="button" class="primary" data-act="upload">Subir a ${monthLabel(k)}</button>`:''}</div>`;
   if(!total)return head+`<div class="empty"><div><h2>${ed?'Este mes está vacío':'Todavía no hay publicaciones en este mes'}</h2><p class="msg">${ed?'Subí las placas de este mes. Si subís varias juntas, podés armar un carrusel.':'Cuando haya contenido de este mes, va a aparecer acá.'}</p></div>${ed?'<button type="button" class="primary" data-act="upload">Elegir archivos</button>':''}</div>`;
   if(S.filter!=='todas')list=list.filter(i=>okSt(i.status)===S.filter);
