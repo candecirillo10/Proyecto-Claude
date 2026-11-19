@@ -18,6 +18,7 @@ const newId=()=>{const c='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01
 const mk=k=>k||'sin-fecha';
 function route(){
   const parts=decodeURIComponent(location.hash.slice(1)).split('--');
+  if(parts[0]===''||parts[0]==='pendientes')return {cal:true,pend:true,month:curMonth()};
   if(parts[0]==='calendario')return {cal:true,month:/^\d{4}-\d{2}$/.test(parts[1]||'')?parts[1]:curMonth()};
   const f=folders().find(x=>x.id===parts[0])||folders()[0];
   let month=null;if(parts[1]==='sin-fecha')month='';else if(/^\d{4}-\d{2}$/.test(parts[1]||''))month=parts[1];
@@ -70,7 +71,7 @@ async function setAvatar(file){
   if(!type||!type.startsWith('image/')){m.textContent='Elegí una imagen PNG, JPG, WEBP o GIF.';return}
   if(file.size>20971520){m.textContent='La imagen pesa más de 20 MB.';return}
   m.textContent='Subiendo foto…';let r;
-  try{r=await S.assets.upload(file,{type})}catch(e){m.textContent=upErr(e);return}
+  try{const sx=await shrink(file,type,1024);r=await S.assets.upload(sx.file,{type:sx.type})}catch(e){m.textContent=upErr(e);return}
   const old=S.config.avatar;
   try{await saveConfig({avatar:r.id});S.config.avatar=r.id;if(old)S.assets.delete(old).catch(()=>{});$('#avWrap').innerHTML=avRow();$('#avMsg').textContent='Foto actualizada.';renderHeader()}catch(e){m.textContent=dbErr(e);S.assets.delete(r.id).catch(()=>{})}
 }
@@ -79,9 +80,9 @@ async function removeAvatar(){
   try{await saveConfig({avatar:''});S.config.avatar='';S.assets?.delete(old).catch(()=>{});$('#avWrap').innerHTML=avRow();renderHeader()}catch(e){$('#avMsg').textContent=dbErr(e)}
 }
 function renderTabs(){
-  const r=route();
-  $('#tabs').innerHTML=folders().map(f=>{const on=!r.cal&&f.id===r.f.id;return `<a class="tab${on?' on':''}" href="#${esc(f.id)}"${on?' aria-current="page"':''}>${esc(f.name)}<span>${all().filter(i=>i.folder===f.id).length}</span></a>`}).join('')
-    +`<a class="tab${r.cal?' on':''}" href="#calendario"${r.cal?' aria-current="page"':''}>Calendario</a>`+(S.canEdit?'<button type="button" class="tab add" data-act="addFolder">+ Carpeta</button>':'');
+  const r=route(),pn=pendCount();
+  $('#tabs').innerHTML=`<a class="tab${r.pend?' on':''}" href="#pendientes"${r.pend?' aria-current="page"':''}>Pendientes${pn?`<span>${pn}</span>`:''}</a>`+folders().map(f=>{const on=!r.cal&&f.id===r.f.id;return `<a class="tab${on?' on':''}" href="#${esc(f.id)}"${on?' aria-current="page"':''}>${esc(f.name)}<span>${all().filter(i=>i.folder===f.id).length}</span></a>`}).join('')
+    +`<a class="tab${r.cal&&!r.pend?' on':''}" href="#calendario"${r.cal&&!r.pend?' aria-current="page"':''}>Calendario</a>`+(S.canEdit?'<button type="button" class="tab add" data-act="addFolder">+ Carpeta</button>':'');
 }
 let barKey='';
 const noticeHtml=()=>S.err?`<div class="notice">${esc(S.err)}</div>`:S.slow?'<div class="notice">El contenido está tardando en cargar. Puede que lo que ves no esté actualizado.</div>':'';
@@ -94,7 +95,7 @@ function renderView0(){
     if(key!==barKey){barKey=key;v.innerHTML=`<div class="nbar">${notesBar(f)}</div><div id="notice"></div><div id="grid"></div>`}
     $('#notice').innerHTML=noticeHtml();$('#grid').innerHTML=notesGrid(f);return}
   barKey='';
-  v.innerHTML=noticeHtml()+(r.cal?calView(r.month):r.post?postView(r.f,r.post):r.month!==null?monthView(r.f,r.month):monthsView(r.f));
+  v.innerHTML=noticeHtml()+(r.pend?pendView():r.cal?calView(r.month):r.post?postView(r.f,r.post):r.month!==null?monthView(r.f,r.month):monthsView(r.f));
 }
 function thumb(a){if(!a)return'';return a.video?`<video src="${blob(a.id)}#t=0.1" muted playsinline preload="metadata"></video><span class="play" aria-hidden="true"></span>`:`<img src="${blob(a.id)}" alt="" loading="lazy">`}
 const monthKey=i=>{if(i.date&&/^\d{4}-\d{2}/.test(i.date))return i.date.slice(0,7);if(i.created){const d=new Date(i.created);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}return ''};
@@ -138,12 +139,42 @@ function postView(f,id){
   const title=it.title||(n>1?'Carrusel sin título':'Sin título');
   const head=crumbs([[pf.name,'#'+pf.id],[monthLabel(k),'#'+pf.id+'--'+mk(k)],[title]]);
   const info=`<div class="phead" id="${pid(it.id)}" data-comment-target><div class="ptitle"><h2 class="vtitle">${esc(title)}</h2><div class="row"><span class="chip st-${st}">${stLabel(st)}</span>${it.date?`<span class="msg">Se publica el ${fmtLong(it.date)}</span>`:''}<span class="msg">· ${placas(n)}</span></div></div>
-  <div class="row">${ed&&S.assets?'<button type="button" class="primary" data-act="addslides">Agregar placas</button>':''}${ed?`<button type="button" data-act="edit" data-id="${esc(it.id)}">Editar datos</button>`:''}${S.comments?`<button type="button" data-act="comment" data-el="${pid(it.id)}">Comentar publicación</button>`:''}${ed?`<button type="button" class="danger" data-act="pdel" data-id="${esc(it.id)}">Eliminar</button>`:''}</div></div>
+  <div class="row"><button type="button" data-act="dl" data-id="${esc(it.id)}" data-s="all">${n>1?'Descargar todas':'Descargar'}</button>${ed&&S.assets?'<button type="button" class="primary" data-act="addslides">Agregar placas</button>':''}${ed?`<button type="button" data-act="edit" data-id="${esc(it.id)}">Editar datos</button>`:''}${S.comments?`<button type="button" data-act="comment" data-el="${pid(it.id)}">Comentar publicación</button>`:''}${ed?`<button type="button" class="danger" data-act="pdel" data-id="${esc(it.id)}">Eliminar</button>`:''}</div></div>
   <p class="msg" id="postMsg" aria-live="polite">${esc(S.postMsg||'')}</p>${reviewBox(it)}
   ${it.copy?`<div class="pcopy"><div class="row" style="justify-content:space-between"><strong>Copy</strong><button type="button" data-act="copy" data-id="${esc(it.id)}">Copiar texto</button></div><pre class="copy">${esc(it.copy)}</pre></div>`:''}`;
   const slides=n?`<div class="grid ${cls(pf)} slides">${as.map((a,j)=>`<div class="slide" id="s-${pid(it.id)}-${j}" data-comment-target><button type="button" class="card" data-act="open" data-id="${esc(it.id)}" data-s="${j}" aria-label="Ver placa ${j+1} de ${n}"><div class="media" style="aspect-ratio:${ratio(pf)}">${thumb(a)}<span class="num">${j+1}</span></div></button>${ed?`<div class="sl-tools"><button type="button" data-act="mv" data-id="${esc(it.id)}" data-s="${j}" data-d="-1"${j===0?' disabled':''} aria-label="Mover antes">←</button><button type="button" data-act="mv" data-id="${esc(it.id)}" data-s="${j}" data-d="1"${j===n-1?' disabled':''} aria-label="Mover después">→</button><button type="button" class="danger" data-act="rmslide" data-id="${esc(it.id)}" data-s="${j}">Quitar</button></div>`:''}</div>`).join('')}</div>`
     :`<div class="empty"><div><h2>Sin placas todavía</h2><p class="msg">${ed?'Agregá las placas de esta publicación.':'Todavía no hay placas en esta publicación.'}</p></div>${ed&&S.assets?'<button type="button" class="primary" data-act="addslides">Agregar placas</button>':''}</div>`;
   return head+info+slides;
+}
+function mediaItems(){const mf=folders().filter(f=>f.kind==='media');return S.items.filter(i=>mf.some(f=>f.id===i.folder))}
+function needsAction(i){const st=okSt(i.status),t=today();
+  if(S.canEdit)return st==='cambios'||(i.date&&i.date<t&&st!=='publicada'&&st!=='borrador');
+  return st==='revision'}
+function pendCount(){if(!S.loaded)return 0;return mediaItems().filter(needsAction).length}
+function pendRow(i,note){
+  const f=folders().find(x=>x.id===i.folder)||folders()[0],st=okSt(i.status),n=(i.assets||[]).length,t=today(),past=i.date&&i.date<t&&st!=='publicada';
+  const cc=S.cm?S.cm.count(pid(i.id)):0;
+  return `<a class="drow" href="${esc(postHref(i))}"><div class="media" style="aspect-ratio:${ratio(f)}">${thumb((i.assets||[])[0])}</div><div class="ptitle" style="gap:4px"><span class="msg">${i.date?esc(fmtLong(i.date)):'Sin fecha'} · ${esc(f.name)} · ${placas(n)}</span><strong>${esc(i.title||'Sin título')}</strong>${note?`<span class="msg" style="font-style:italic">“${esc(note)}”</span>`:''}<span><span class="chip st-${st}">${stLabel(st)}</span>${past?' <span class="chip st-cambios">Fecha pasada</span>':''}${cc?` <span class="msg">· ${cc} ${cc===1?'comentario':'comentarios'}</span>`:''}</span></div></a>`;
+}
+function lastAsk(i){if(!S.cm)return '';const l=S.cm.list(pid(i.id)).filter(c=>/^Cambios pedidos:/.test(c.body));const c=l[l.length-1];return c?c.body.replace(/^Cambios pedidos:\s*/,'').slice(0,160):''}
+function pendView(){
+  if(!S.loaded)return skeleton({ratio:'4/5'});
+  const items=mediaItems().slice().sort(asc),t=today(),own=S.canEdit,by=s=>items.filter(i=>okSt(i.status)===s);
+  const groups=own?[
+    ['Con cambios pedidos','Pidieron cambios: tenés que modificarlas.',by('cambios'),true],
+    ['Con fecha pasada sin publicar','La fecha ya pasó y todavía no figuran como publicadas.',items.filter(i=>i.date&&i.date<t&&!['publicada','borrador','cambios'].includes(okSt(i.status))),false],
+    ['Esperando aprobación','Ya las ve el cliente y todavía no respondió.',by('revision').filter(i=>!(i.date&&i.date<t)),false],
+    ['Aprobadas, listas para publicar','Descargalas y publicalas.',by('aprobada').filter(i=>!(i.date&&i.date<t)),false],
+    ['Borradores','Solo las ves vos.',by('borrador'),false]
+  ]:[
+    ['Para revisar','Aprobalas o pedí cambios.',by('revision'),false],
+    ['Pediste cambios','Estamos trabajando en esto.',by('cambios'),true],
+    ['Aprobadas','Listas para publicar.',by('aprobada'),false]
+  ];
+  const shown=groups.filter(g=>g[2].length),total=own?items.filter(needsAction).length:by('revision').length;
+  const head=`<div class="bar"><div><h2 class="vtitle">Pendientes</h2><p class="msg">${total?(own?total+(total===1?' publicación necesita tu atención.':' publicaciones necesitan tu atención.'):total+(total===1?' publicación espera tu revisión.':' publicaciones esperan tu revisión.')):'Todo al día.'}</p></div></div>`;
+  if(!shown.length)return head+`<div class="empty"><div><h2>Todo al día</h2><p class="msg">${own?'No hay nada pendiente ahora. Cuando haya cambios pedidos o aprobaciones, aparecen acá.':'No tenés nada para revisar por ahora. Cuando haya contenido nuevo, lo vas a ver acá.'}</p></div></div>`;
+  return head+shown.map(([title,sub,list,ask])=>`<section class="month"><h2 class="mhead">${title}<span>${pubs(list.length)}</span></h2><p class="msg" style="margin:-8px 0 12px">${sub}</p><div class="daylist">${list.map(i=>pendRow(i,ask?lastAsk(i):'')).join('')}</div></section>`).join('');
 }
 function calView(k){
   if(!S.loaded)return '<div class="cal skel" style="height:420px"></div>';
@@ -193,6 +224,18 @@ function openSheet(html,size){
 }
 function closeSheet(){$('#ov').hidden=true;$('#sheet').innerHTML='';document.body.style.overflow='';S.open=null;S.cmOpen=null;S.urls.forEach(u=>URL.revokeObjectURL(u));S.urls=[]}
 
+async function shrink(file,type,max){
+  max=max||2160;
+  if(!/^image\/(jpeg|png|webp)$/.test(type)||file.size<350000)return {file,type};
+  try{
+    let bm;try{bm=await createImageBitmap(file,{imageOrientation:'from-image'})}catch(_){bm=await createImageBitmap(file)}
+    const sc=Math.min(1,max/Math.max(bm.width,bm.height)),w=Math.round(bm.width*sc),h=Math.round(bm.height*sc);
+    const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#0d0d0d';x.fillRect(0,0,w,h);x.drawImage(bm,0,0,w,h);bm.close&&bm.close();
+    const out=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));
+    if(out&&out.size<file.size*0.92)return {file:new File([out],file.name.replace(/\.\w+$/,'')+'.jpg',{type:'image/jpeg'}),type:'image/jpeg'};
+  }catch(_){}
+  return {file,type};
+}
 const OK=/^(image\/(png|jpeg|webp|gif)|video\/(mp4|webm))$/;
 const extType=n=>({png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',gif:'image/gif',mp4:'video/mp4',webm:'video/webm'})[(n.split('.').pop()||'').toLowerCase()];
 function openUpload(files){
@@ -220,7 +263,7 @@ async function doUpload(){
   const base={title:$('#uTitle').value.trim(),date:$('#uDate').value,status:$('#uStatus').value,copy:$('#uCopy').value.trim(),folder:$('#uFolder').value};
   const one=S.pending.length===1||document.querySelector('input[name=uMode]:checked')?.value==='one',up=[];
   try{
-    for(let k=0;k<S.pending.length;k++){msg.textContent=`Subiendo ${k+1} de ${S.pending.length}…`;const x=S.pending[k];const r=await S.assets.upload(x.file,{type:x.type});up.push({id:r.id,video:String(r.contentType).startsWith('video')})}
+    for(let k=0;k<S.pending.length;k++){msg.textContent=`Subiendo ${k+1} de ${S.pending.length}…`;const x0=S.pending[k],x=await shrink(x0.file,x0.type);const r=await S.assets.upload(x.file,{type:x.type});up.push({id:r.id,video:String(r.contentType).startsWith('video')})}
     msg.textContent='Guardando…';const now=Date.now();let first=null;
     if(one){first={...base,assets:up,created:now,id:newId()};const {id,...body}=first;await S.db.doc('items/'+id).set(body)}
     else for(let k=0;k<up.length;k++){const id=newId();await S.db.doc('items/'+id).set({...base,assets:[up[k]],created:now-k})}
@@ -234,7 +277,7 @@ async function addSlides(id,files){
   const list=files.map(x=>({file:x,type:OK.test(x.type)?x.type:extType(x.name)})).filter(x=>x.type&&x.file.size<=20971520);
   if(!list.length){S.postMsg='Usá imágenes PNG, JPG, WEBP o GIF, o videos MP4 o WEBM de hasta 20 MB.';renderView();return}
   const up=[];
-  try{for(let k=0;k<list.length;k++){S.postMsg=`Subiendo ${k+1} de ${list.length}…`;renderView();const r=await S.assets.upload(list[k].file,{type:list[k].type});up.push({id:r.id,video:String(r.contentType).startsWith('video')})}
+  try{for(let k=0;k<list.length;k++){S.postMsg=`Subiendo ${k+1} de ${list.length}…`;renderView();const sx=await shrink(list[k].file,list[k].type);const r=await S.assets.upload(sx.file,{type:sx.type});up.push({id:r.id,video:String(r.contentType).startsWith('video')})}
     const fresh=S.items.find(i=>i.id===id)||it;await S.db.doc('items/'+id).update({assets:[...(fresh.assets||[]),...up]});S.postMsg=`Listo: se ${up.length===1?'agregó 1 placa':'agregaron '+up.length+' placas'}.`}
   catch(e){S.postMsg=up.length===list.length?dbErr(e):upErr(e)}
   renderView();
@@ -255,8 +298,13 @@ function openDetail(id,slide){
   const nav=as.length>1?`<button type="button" class="nav l" data-act="slide" data-id="${esc(id)}" data-s="${slide-1}"${slide===0?' disabled':''} aria-label="Placa anterior">‹</button><button type="button" class="nav r" data-act="slide" data-id="${esc(id)}" data-s="${slide+1}"${slide===as.length-1?' disabled':''} aria-label="Placa siguiente">›</button><div class="dots">${as.map((_,k)=>`<i class="${k===slide?'on':''}"></i>`).join('')}</div>`:'';
   const el=`s-${pid(id)}-${slide}`;
   const cbtn=S.comments?`<div class="cbox"><button type="button" class="primary" data-act="comment" data-el="${el}">Comentar esta placa</button><p class="msg">${S.canEdit?'Dejá una nota sobre esta placa. Tu cliente también la puede ver.':'Contanos qué te gusta o qué cambiarías. Tu comentario queda pegado a esta placa.'}</p></div>`:'';
-  openSheet(`<div class="detail"><div class="viewer" style="aspect-ratio:${ratio(f)}">${media}${nav}</div><div class="side"><p class="msg">Placa ${slide+1} de ${as.length}</p>${viewSide(it,f)}${reviewBox(it)}${cbtn}</div></div>`);
+  openSheet(`<div class="detail"><div class="viewer" style="aspect-ratio:${ratio(f)}">${media}${nav}</div><div class="side"><p class="msg">Placa ${slide+1} de ${as.length}</p>${viewSide(it,f)}<div class="row"><button type="button" data-act="dl" data-id="${esc(id)}" data-s="${slide}">Descargar esta placa</button></div>${reviewBox(it)}${cbtn}</div></div>`);
   S.open={id,slide};
+}
+async function getFile(a,name){const r=await fetch(window.__blobUrl(a.id));if(!r.ok)throw new Error('fetch');const b=await r.blob();const ext=({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','video/mp4':'mp4','video/webm':'webm'})[b.type]||'bin';return new File([b],name+'.'+ext,{type:b.type})}
+async function saveFiles(files){
+  try{if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files});return}}catch(e){if(e&&e.name==='AbortError')return}
+  for(const f of files){const u=URL.createObjectURL(f),a=document.createElement('a');a.href=u;a.download=f.name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);await new Promise(r=>setTimeout(r,350))}
 }
 function reviewBox(it){
   if(S.canEdit||!S.cm)return '';const st=okSt(it.status);
@@ -345,6 +393,9 @@ document.addEventListener('click',async e=>{
     try{await S.comments.openComposer({element:el})}catch(err){if(err&&(err.code==='unavailable'||err.code==='not_granted')){S.comments=null;barKey='';renderView()}}}
   else if(a==='ndel')$('#ntMsg').innerHTML='¿Eliminar esta idea? <button type="button" class="danger" data-act="ndelyes">Sí, eliminar</button> <button type="button" data-act="no">No</button>';
   else if(a==='ndelyes'){const fm=$('#noteForm');try{await noteRef(fm.dataset.id,fm.dataset.p==='1').delete();closeSheet()}catch(err){$('#ntMsg').textContent=dbErr(err)}}
+  else if(a==='dl'){const it=S.items.find(i=>i.id===t.dataset.id);if(!it)return;const as=it.assets||[],old=t.textContent;t.disabled=true;t.textContent='Preparando…';
+    try{const idx=t.dataset.s==='all'?as.map((_,i)=>i):[+t.dataset.s];const files=await Promise.all(idx.map(i=>getFile(as[i],slug(it.title||'placa')+'-'+(i+1))));await saveFiles(files);t.textContent=old}catch(_){t.textContent='No se pudo descargar'}
+    setTimeout(()=>{t.textContent=old;t.disabled=false},1800)}
   else if(a==='approve'){t.disabled=true;try{await S.cm.review(t.dataset.id,'aprobada');S.postMsg='Listo: aprobaste esta publicación.';closeSheet();renderView()}catch(_){t.disabled=false;document.querySelectorAll('.rvmsg').forEach(m=>m.textContent='No se pudo guardar. Probá de nuevo.')}}
   else if(a==='changes'){closeSheet();openSheet(`<h2>Pedir cambios</h2><form id="chForm" data-id="${esc(t.dataset.id)}" class="form"><label class="f">¿Qué habría que modificar? <textarea id="chText" maxlength="1800" required placeholder="Ej.: cambiar el texto de arriba, usar otro color de fondo…"></textarea></label><p class="msg" id="chMsg"></p><div class="row end"><button type="button" data-act="close">Cancelar</button><button class="primary" type="submit">Enviar</button></div></form>`,'sm')}
   else if(a==='cmdel'){try{await S.cm.remove(+t.dataset.id)}catch(_){}}
@@ -400,7 +451,7 @@ async function start(){
   try{S.canEdit=!!(user&&await user.canEdit())}catch(_){}
   if(S.canEdit){try{S.assets=await claude.use('assets')}catch(_){}try{S.uid=await user.id()}catch(_){}}
   
-  try{S.cm=await claude.use('comments');S.comments={openComposer:openComments};S.cm.subscribe(()=>{decorate();if(S.cmOpen)drawComments()})}catch(_){}
+  try{S.cm=await claude.use('comments');S.comments={openComposer:openComments};S.cm.subscribe(()=>{renderTabs();decorate();if(S.cmOpen)drawComments()})}catch(_){}
   render();
   const timer=setTimeout(()=>{if(!S.confirmed){S.slow=true;renderView()}},10000);
   db.doc('config/main').onSnapshot(s=>{const d=s.exists?s.data():null;const fs=Array.isArray(d?.folders)?d.folders.filter(f=>f&&typeof f.id==='string'&&f.name):[];S.config={brand:d?.brand||'',handle:d?.handle||'',avatar:typeof d?.avatar==='string'?d.avatar:'',avatarZoom:+d?.avatarZoom||100,folders:fs.length?fs:DEF};render()},()=>{});
